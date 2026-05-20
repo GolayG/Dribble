@@ -2,18 +2,19 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, ChevronLeft, CheckCircle2, CalendarDays, Clock, User } from "lucide-react";
+import { ChevronRight, ChevronLeft, CheckCircle2, CalendarDays, Clock, User, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FieldCard } from "@/components/booking/FieldCard";
 import { TimeSlotPicker } from "@/components/booking/TimeSlotPicker";
 import { formatCurrency } from "@/lib/utils";
+import { BOOKING_ADDONS } from "@/lib/constants";
 import type { Field } from "@/lib/data/fields";
 import { mapFieldRow } from "@/lib/data/fields";
 import { supabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
-const STEPS = ["Choose Field", "Date & Time", "Your Details", "Confirm"];
+const STEPS = ["Choose Field", "Date & Time", "Add-ons", "Your Details", "Confirm"];
 
 function buildDateTime(date: Date, time: string): string {
   const [h, m] = time.split(":").map(Number);
@@ -22,10 +23,14 @@ function buildDateTime(date: Date, time: string): string {
   return d.toISOString();
 }
 
-function addThirtyMin(time: string): string {
+function addOneHour(time: string): string {
   const [h, m] = time.split(":").map(Number);
-  const total = h * 60 + m + 30;
-  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+  return `${String((h + 1) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+function isWithinOfficeHours(slot: string): boolean {
+  const h = parseInt(slot.split(":")[0]);
+  return h >= 9 && h < 21;
 }
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -38,6 +43,7 @@ export function BookingFlow() {
   const [selectedField, setSelectedField] = useState<Field | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
+  const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -59,13 +65,23 @@ export function BookingFlow() {
     filter === "All" ? true : f.type === filter
   );
 
+  const addonsAvailable = selectedSlots.length > 0 && isWithinOfficeHours(selectedSlots[0]);
+
+  const addonTotal = selectedAddons.reduce((sum, id) => {
+    const addon = BOOKING_ADDONS.find((a) => a.id === id);
+    return sum + (addon?.price ?? 0);
+  }, 0);
+
+  const fieldTotal = selectedField ? selectedField.pricePerHour * selectedSlots.length : 0;
+  const total = fieldTotal + addonTotal;
+
   async function handleConfirm() {
     if (!selectedField || !selectedDate || selectedSlots.length === 0) return;
     setSubmitting(true);
     setSubmitError(null);
 
     const startTime = buildDateTime(selectedDate, selectedSlots[0]);
-    const endTime = buildDateTime(selectedDate, addThirtyMin(selectedSlots[selectedSlots.length - 1]));
+    const endTime = buildDateTime(selectedDate, addOneHour(selectedSlots[selectedSlots.length - 1]));
     const customerId = crypto.randomUUID();
     const bookingId = crypto.randomUUID();
 
@@ -109,14 +125,32 @@ export function BookingFlow() {
     );
   };
 
-  const total = selectedField ? selectedField.pricePerHour * (selectedSlots.length * 0.5) : 0;
+  const toggleAddon = (id: string) => {
+    setSelectedAddons((prev) =>
+      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
+    );
+  };
 
   const canNext = [
     !!selectedField,
-    !!selectedDate && selectedSlots.length >= 2,
+    !!selectedDate && selectedSlots.length >= 1,
+    true,
     !!name.trim() && !!email.trim(),
     true,
   ][step];
+
+  function resetFlow() {
+    setStep(0);
+    setConfirmed(false);
+    setSelectedField(null);
+    setSelectedSlots([]);
+    setSelectedDate(null);
+    setSelectedAddons([]);
+    setName("");
+    setEmail("");
+    setPhone("");
+    setSubmitError(null);
+  }
 
   if (confirmed) {
     return (
@@ -140,10 +174,16 @@ export function BookingFlow() {
         <div className="bg-muted border border-border p-6 text-left w-full max-w-sm space-y-2">
           <div className="flex justify-between text-sm"><span className="text-muted-foreground">Field</span><span className="font-semibold">{selectedField?.name}</span></div>
           <div className="flex justify-between text-sm"><span className="text-muted-foreground">Date</span><span className="font-semibold">{selectedDate?.toLocaleDateString()}</span></div>
-          <div className="flex justify-between text-sm"><span className="text-muted-foreground">Time</span><span className="font-semibold">{selectedSlots[0]} – {selectedSlots[selectedSlots.length - 1]}</span></div>
+          <div className="flex justify-between text-sm"><span className="text-muted-foreground">Time</span><span className="font-semibold">{selectedSlots[0]} – {addOneHour(selectedSlots[selectedSlots.length - 1])}</span></div>
+          {selectedAddons.length > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Add-ons</span>
+              <span className="font-semibold">{selectedAddons.map((id) => BOOKING_ADDONS.find((a) => a.id === id)?.label).join(", ")}</span>
+            </div>
+          )}
           <div className="flex justify-between text-sm font-bold border-t border-border pt-2 mt-2"><span>Total Paid</span><span className="text-primary">{formatCurrency(total)}</span></div>
         </div>
-        <Button variant="primary" size="lg" onClick={() => { setStep(0); setConfirmed(false); setSelectedField(null); setSelectedSlots([]); setSelectedDate(null); setName(""); setEmail(""); setPhone(""); setSubmitError(null); }}>
+        <Button variant="primary" size="lg" onClick={resetFlow}>
           Book Another Field
         </Button>
       </motion.div>
@@ -246,18 +286,58 @@ export function BookingFlow() {
                 <h3 className="font-bold text-lg mb-1 flex items-center gap-2">
                   <Clock className="h-5 w-5 text-primary" /> Select Time Slots
                 </h3>
-                <p className="text-xs text-muted-foreground mb-4">Minimum 1 hour (2 slots). Office hours 9 AM – 9 PM.</p>
+                <p className="text-xs text-muted-foreground mb-4">Available 24 hours. Each slot is 1 hour. Select one or more.</p>
                 <TimeSlotPicker selected={selectedSlots} onToggle={toggleSlot} date={selectedDate} />
-                {selectedSlots.length === 1 && (
-                  <p className="mt-3 text-xs text-orange-600 border border-orange-200 bg-orange-50 px-3 py-2">
-                    Select at least one more slot — minimum booking is 1 hour.
-                  </p>
-                )}
               </div>
             </div>
           )}
 
           {step === 2 && (
+            <div className="max-w-lg">
+              <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+                <ShoppingBag className="h-5 w-5 text-primary" /> Add-ons
+              </h3>
+              {addonsAvailable ? (
+                <>
+                  <p className="text-sm text-muted-foreground mb-6">Enhance your booking with optional extras.</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {BOOKING_ADDONS.map((addon) => {
+                      const active = selectedAddons.includes(addon.id);
+                      return (
+                        <motion.button
+                          key={addon.id}
+                          whileTap={{ scale: 0.97 }}
+                          onClick={() => toggleAddon(addon.id)}
+                          className={cn(
+                            "flex items-center justify-between px-4 py-3 border-2 text-left transition-all",
+                            active ? "border-primary bg-primary/5" : "border-border hover:border-primary"
+                          )}
+                        >
+                          <div>
+                            <p className="font-semibold text-sm">{addon.label}</p>
+                            <p className="text-xs text-muted-foreground">+{formatCurrency(addon.price)}</p>
+                          </div>
+                          {active && <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />}
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                  {selectedAddons.length > 0 && (
+                    <p className="mt-4 text-sm text-muted-foreground">
+                      Add-ons total: <span className="font-semibold text-foreground">{formatCurrency(addonTotal)}</span>
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div className="border border-border p-6 text-sm text-muted-foreground bg-muted/40">
+                  <p className="font-semibold text-foreground mb-1">Add-ons not available</p>
+                  <p>Add-ons can only be picked up during office hours (9 AM – 9 PM). Your selected booking time is outside these hours.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 3 && (
             <div className="max-w-md">
               <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
                 <User className="h-5 w-5 text-primary" /> Your Details
@@ -297,7 +377,7 @@ export function BookingFlow() {
             </div>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <div className="max-w-lg">
               <h3 className="font-bold text-lg mb-6">Booking Summary</h3>
               <div className="border border-border divide-y divide-border">
@@ -306,7 +386,15 @@ export function BookingFlow() {
                 {phone && <div className="p-4 flex justify-between"><span className="text-muted-foreground">Phone</span><span className="font-semibold">{phone}</span></div>}
                 <div className="p-4 flex justify-between"><span className="text-muted-foreground">Field</span><span className="font-semibold">{selectedField?.name}</span></div>
                 <div className="p-4 flex justify-between"><span className="text-muted-foreground">Date</span><span className="font-semibold">{selectedDate?.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</span></div>
-                <div className="p-4 flex justify-between"><span className="text-muted-foreground">Time</span><span className="font-semibold">{selectedSlots[0]} – {addThirtyMin(selectedSlots[selectedSlots.length - 1])} ({selectedSlots.length * 0.5}h)</span></div>
+                <div className="p-4 flex justify-between"><span className="text-muted-foreground">Time</span><span className="font-semibold">{selectedSlots[0]} – {addOneHour(selectedSlots[selectedSlots.length - 1])} ({selectedSlots.length}h)</span></div>
+                {selectedAddons.length > 0 && (
+                  <div className="p-4 flex justify-between">
+                    <span className="text-muted-foreground">Add-ons</span>
+                    <span className="font-semibold text-right max-w-[60%]">{selectedAddons.map((id) => BOOKING_ADDONS.find((a) => a.id === id)?.label).join(", ")}</span>
+                  </div>
+                )}
+                <div className="p-4 flex justify-between"><span className="text-muted-foreground">Field cost</span><span className="font-semibold">{formatCurrency(fieldTotal)}</span></div>
+                {addonTotal > 0 && <div className="p-4 flex justify-between"><span className="text-muted-foreground">Add-ons</span><span className="font-semibold">{formatCurrency(addonTotal)}</span></div>}
                 <div className="p-4 flex justify-between font-bold text-lg"><span>Total</span><span className="text-primary">{formatCurrency(total)}</span></div>
               </div>
               <p className="text-xs text-muted-foreground mt-4">By confirming, you agree to our booking terms. Payment processed securely via Stripe.</p>

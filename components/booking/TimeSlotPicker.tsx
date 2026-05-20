@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { formatTime } from "@/lib/utils";
 import { TIME_SLOTS } from "@/lib/constants";
 
-const BOOKED_SLOTS = ["09:00", "09:30", "14:00", "14:30", "15:00", "19:30"];
+const BOOKED_SLOTS: string[] = [];
 
 interface TimeSlotPickerProps {
   selected: string[];
@@ -72,9 +72,9 @@ export function TimeSlotPicker({ selected, onToggle, date }: TimeSlotPickerProps
           animate={{ opacity: 1, y: 0 }}
           className="mt-4 p-4 bg-primary/5 border border-primary/20 text-sm"
         >
-          <span className="font-bold text-primary">{selected.length} slot{selected.length > 1 ? "s" : ""} selected</span>
+          <span className="font-bold text-primary">{selected.length} hour{selected.length > 1 ? "s" : ""} selected</span>
           <span className="text-muted-foreground ml-2">
-            ({formatTime(selected[0])} – {formatTime(selected[selected.length - 1].split(":").map((p, i) => i === 1 ? String(parseInt(p) + 30).padStart(2, "0") : p).join(":") ?? selected[selected.length - 1])})
+            ({formatTime(selected[0])} – {formatTime(`${String((parseInt(selected[selected.length - 1].split(":")[0]) + 1) % 24).padStart(2, "0")}:00`)})
           </span>
         </motion.div>
       )}
