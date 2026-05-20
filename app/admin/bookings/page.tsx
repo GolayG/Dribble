@@ -32,17 +32,20 @@ function durationMins(start: string | null, end: string | null) {
 export default async function AdminBookingsPage() {
   const db = createServerClient();
 
-  const [{ data: bookings }, { data: customers }] = await Promise.all([
+  const [bookingsRes, customersRes] = await Promise.all([
     db.from("bookings").select("*").order("created_at", { ascending: false }),
     db.from("customers").select("*"),
   ]);
+
+  const bookings = bookingsRes.data as BookingRow[] | null;
+  const customers = customersRes.data as CustomerRow[] | null;
 
   const customerMap: Record<string, CustomerRow> = {};
   for (const c of customers ?? []) {
     if (c.id) customerMap[c.id] = c;
   }
 
-  const rows = (bookings ?? []).map((b: BookingRow) => ({
+  const rows = (bookings ?? []).map((b) => ({
     ...b,
     customer: b.customer_id ? (customerMap[b.customer_id] ?? null) : null,
   }));
