@@ -3,7 +3,7 @@ import type { FieldRow } from "@/lib/supabase/types";
 export type Field = {
   id: string;
   name: string;
-  type: "Soccer" | "Pickleball" | "Indoor" | "Outdoor";
+  type: string;
   surface: string;
   size: string;
   capacity: number;
