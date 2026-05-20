@@ -6,14 +6,15 @@ import { createServerClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Book a Field",
-  description: "Reserve soccer fields and pickleball courts at Dribble Soccer Complex.",
+  description: "Reserve soccer fields at Dribble Soccer Complex.",
 };
 
 export default async function BookingPage() {
   const db = createServerClient();
   const { count } = await db
     .from("fields")
-    .select("*", { count: "exact", head: true });
+    .select("*", { count: "exact", head: true })
+    .neq("field_type", "Pickleball");
   const availableCount = count ?? 0;
 
   return (
@@ -35,7 +36,7 @@ export default async function BookingPage() {
             </p>
           </div>
 
-          <BookingFlow />
+          <BookingFlow excludeType="Pickleball" />
         </div>
       </main>
       <Footer />

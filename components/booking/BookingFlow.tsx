@@ -35,9 +35,14 @@ function isWithinOfficeHours(slot: string): boolean {
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-export function BookingFlow() {
+interface BookingFlowProps {
+  onlyType?: string;
+  excludeType?: string;
+}
+
+export function BookingFlow({ onlyType, excludeType }: BookingFlowProps = {}) {
   const [step, setStep] = useState(0);
-  const [filter, setFilter] = useState<string>("All");
+  const [filter, setFilter] = useState<string>(onlyType ?? "All");
   const [fields, setFields] = useState<Field[]>([]);
   const [fieldsLoading, setFieldsLoading] = useState(true);
   const [selectedField, setSelectedField] = useState<Field | null>(null);
@@ -52,13 +57,15 @@ export function BookingFlow() {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase
-      .from("fields")
-      .select("*")
-      .then(({ data }) => {
-        if (data) setFields(data.map(mapFieldRow));
-        setFieldsLoading(false);
-      });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let q: any = supabase.from("fields").select("*");
+    if (onlyType) q = q.eq("field_type", onlyType);
+    if (excludeType) q = q.neq("field_type", excludeType);
+    q.then(({ data }: { data: unknown[] | null }) => {
+      if (data) setFields((data as Parameters<typeof mapFieldRow>[0][]).map(mapFieldRow));
+      setFieldsLoading(false);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filteredFields = fields.filter((f) =>
@@ -240,21 +247,23 @@ export function BookingFlow() {
         >
           {step === 0 && (
             <div>
-              <div className="flex flex-wrap gap-2 mb-8">
-                {["All", ...Array.from(new Set(fields.map((f) => f.type)))].map((t) => (
-                  <motion.button
-                    key={t}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setFilter(t)}
-                    className={cn(
-                      "px-4 py-2 text-sm font-bold border-2 uppercase tracking-wide transition-all",
-                      filter === t ? "bg-primary text-white border-primary" : "border-border text-foreground hover:border-primary"
-                    )}
-                  >
-                    {t}
-                  </motion.button>
-                ))}
-              </div>
+              {!onlyType && (
+                <div className="flex flex-wrap gap-2 mb-8">
+                  {["All", ...Array.from(new Set(fields.map((f) => f.type)))].map((t) => (
+                    <motion.button
+                      key={t}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setFilter(t)}
+                      className={cn(
+                        "px-4 py-2 text-sm font-bold border-2 uppercase tracking-wide transition-all",
+                        filter === t ? "bg-primary text-white border-primary" : "border-border text-foreground hover:border-primary"
+                      )}
+                    >
+                      {t}
+                    </motion.button>
+                  ))}
+                </div>
+              )}
               {fieldsLoading ? (
                 <p className="text-muted-foreground text-sm">Loading fields...</p>
               ) : (
