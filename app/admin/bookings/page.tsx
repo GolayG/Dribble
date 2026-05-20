@@ -37,11 +37,10 @@ export default async function AdminBookingsPage() {
     db.from("customers").select("*"),
   ]);
 
-  const customerMap = Object.fromEntries(
-    (customers ?? [])
-      .filter((c): c is CustomerRow & { id: string } => !!c.id)
-      .map((c) => [c.id, c])
-  );
+  const customerMap: Record<string, CustomerRow> = {};
+  for (const c of customers ?? []) {
+    if (c.id) customerMap[c.id] = c;
+  }
 
   const rows = (bookings ?? []).map((b: BookingRow) => ({
     ...b,
