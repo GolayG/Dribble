@@ -49,6 +49,44 @@ export interface Database {
         };
         Update: Partial<Database["public"]["Tables"]["bookings"]["Insert"]>;
       };
+      training_programs: {
+        Row: {
+          id: string | null;
+          name: string;
+          description: string;
+          price: number;
+          duration: string;
+        };
+        Insert: {
+          name: string;
+          description: string;
+          price: number;
+          duration: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["training_programs"]["Insert"]>;
+      };
+      training_enrollments: {
+        Row: {
+          id: string | null;
+          program_id: string | null;
+          customer_id: string | null;
+          scheduled_date: string | null;
+          start_time: string | null;
+          status: string | null;
+          total_price: number | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          program_id: string;
+          customer_id: string;
+          scheduled_date: string;
+          start_time: string;
+          status: string;
+          total_price: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["training_enrollments"]["Insert"]>;
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -57,6 +95,8 @@ export interface Database {
 }
 
 // Convenience row types
-export type FieldRow    = Database["public"]["Tables"]["fields"]["Row"];
-export type CustomerRow = Database["public"]["Tables"]["customers"]["Row"];
-export type BookingRow  = Database["public"]["Tables"]["bookings"]["Row"];
+export type FieldRow              = Database["public"]["Tables"]["fields"]["Row"];
+export type CustomerRow           = Database["public"]["Tables"]["customers"]["Row"];
+export type BookingRow            = Database["public"]["Tables"]["bookings"]["Row"];
+export type TrainingProgramRow    = Database["public"]["Tables"]["training_programs"]["Row"];
+export type TrainingEnrollmentRow = Database["public"]["Tables"]["training_enrollments"]["Row"];

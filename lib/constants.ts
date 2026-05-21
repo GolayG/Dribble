@@ -9,6 +9,7 @@ export const NAV_LINKS = [
   { label: "Training", href: "/training" },
   { label: "Leagues", href: "/leagues" },
   { label: "Events", href: "/events" },
+  { label: "Merchandise", href: "/merchandise" },
   { label: "About", href: "/about" },
 ];
 
