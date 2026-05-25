@@ -49,6 +49,26 @@ export interface Database {
         };
         Update: Partial<Database["public"]["Tables"]["bookings"]["Insert"]>;
       };
+      products: {
+        Row: {
+          id: string | null;
+          name: string;
+          description: string;
+          price: number;
+          category: string;
+          tag: string | null;
+          emoji: string | null;
+        };
+        Insert: {
+          name: string;
+          description: string;
+          price: number;
+          category: string;
+          tag?: string | null;
+          emoji?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["products"]["Insert"]>;
+      };
       training_programs: {
         Row: {
           id: string | null;
@@ -98,5 +118,6 @@ export interface Database {
 export type FieldRow              = Database["public"]["Tables"]["fields"]["Row"];
 export type CustomerRow           = Database["public"]["Tables"]["customers"]["Row"];
 export type BookingRow            = Database["public"]["Tables"]["bookings"]["Row"];
+export type ProductRow            = Database["public"]["Tables"]["products"]["Row"];
 export type TrainingProgramRow    = Database["public"]["Tables"]["training_programs"]["Row"];
 export type TrainingEnrollmentRow = Database["public"]["Tables"]["training_enrollments"]["Row"];
