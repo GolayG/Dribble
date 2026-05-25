@@ -5,14 +5,21 @@ import { FadeUp } from "@/components/MotionWrapper";
 import { Badge } from "@/components/ui/badge";
 import { coaches } from "@/lib/data/coaches";
 import { Star, Users, Award } from "lucide-react";
-import { TrainingBookingFlow } from "@/components/booking/TrainingBookingFlow";
+import { createServerClient } from "@/lib/supabase/server";
+import { mapProgramRow } from "@/lib/data/training-programs";
+import { TrainingProgramsSection } from "@/components/booking/TrainingProgramsSection";
 
 export const metadata: Metadata = {
   title: "Training & Coaching",
   description: "Work with certified coaches at Dribble Soccer Complex.",
 };
 
-export default function TrainingPage() {
+export default async function TrainingPage() {
+  const db = createServerClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data } = await (db as any).from("training_programs").select("*");
+  const programs = (data ?? []).map(mapProgramRow);
+
   return (
     <>
       <Navbar />
@@ -32,16 +39,16 @@ export default function TrainingPage() {
           </div>
         </section>
 
-        {/* Booking flow */}
+        {/* Programs */}
         <section className="py-20 bg-background">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
-            <div className="mb-10 border-b border-border pb-8">
-              <h1 className="font-display text-[clamp(2.5rem,6vw,5rem)]">Book a Training Session</h1>
-              <p className="text-muted-foreground mt-2 text-lg max-w-xl">
-                Pick your program, choose a date and time, and confirm — all in a few steps.
+            <FadeUp className="mb-12">
+              <h2 className="font-display text-[clamp(2rem,4vw,3.5rem)]">Training Programs</h2>
+              <p className="text-muted-foreground mt-2 text-lg">
+                Choose a program below and hit <strong>Book Now</strong> to reserve your spot.
               </p>
-            </div>
-            <TrainingBookingFlow />
+            </FadeUp>
+            <TrainingProgramsSection programs={programs} />
           </div>
         </section>
 
@@ -56,7 +63,7 @@ export default function TrainingPage() {
               {coaches.map((c) => (
                 <div key={c.id} className="bg-background border border-border p-6 group hover:border-primary transition-colors">
                   <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-display text-2xl mb-4">
-                    {c.name.split(" ").map((n) => n[0]).join("")}
+                    {c.name.split(" ").map((n: string) => n[0]).join("")}
                   </div>
                   <h3 className="font-bold text-lg">{c.name}</h3>
                   <p className="text-sm text-primary font-semibold mb-3">{c.title}</p>
@@ -66,7 +73,7 @@ export default function TrainingPage() {
                     <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {c.sessions}+ sessions</span>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1">
-                    {c.certifications.slice(0, 2).map((cert) => (
+                    {c.certifications.slice(0, 2).map((cert: string) => (
                       <span key={cert} className="text-[10px] bg-muted border border-border px-2 py-0.5 flex items-center gap-1">
                         <Award className="h-2.5 w-2.5 text-primary" /> {cert}
                       </span>
