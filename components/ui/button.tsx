@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,8 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean;
   href?: string;
 }
+
+const MotionLink = motion(Link);
 
 const variantStyles: Record<Variant, string> = {
   primary:
@@ -39,31 +42,52 @@ export function Button({
   className,
   children,
   disabled,
+  href,
   ...props
 }: ButtonProps) {
   const shouldReduce = useReducedMotion();
 
-  return (
-    <motion.button
-      whileHover={shouldReduce ? {} : { scale: 1.02 }}
-      whileTap={shouldReduce ? {} : { scale: 0.97 }}
-      transition={{ type: "spring", stiffness: 400, damping: 25 }}
-      className={cn(
-        "relative inline-flex items-center justify-center gap-2 rounded-none uppercase transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer select-none",
-        variantStyles[variant],
-        sizeStyles[size],
-        (disabled || loading) && "opacity-50 cursor-not-allowed",
-        className
-      )}
-      disabled={disabled || loading}
-      {...(props as React.ComponentPropsWithoutRef<typeof motion.button>)}
-    >
+  const sharedClassName = cn(
+    "relative inline-flex items-center justify-center gap-2 rounded-none uppercase transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer select-none",
+    variantStyles[variant],
+    sizeStyles[size],
+    (disabled || loading) && "opacity-50 cursor-not-allowed",
+    className
+  );
+
+  const motionProps = {
+    whileHover: shouldReduce ? {} : { scale: 1.02 },
+    whileTap: shouldReduce ? {} : { scale: 0.97 },
+    transition: { type: "spring" as const, stiffness: 400, damping: 25 },
+  };
+
+  const inner = (
+    <>
       {loading && (
         <span className="absolute inset-0 flex items-center justify-center">
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
         </span>
       )}
       <span className={loading ? "opacity-0" : ""}>{children}</span>
+    </>
+  );
+
+  if (href) {
+    return (
+      <MotionLink href={href} className={sharedClassName} {...motionProps}>
+        {inner}
+      </MotionLink>
+    );
+  }
+
+  return (
+    <motion.button
+      className={sharedClassName}
+      disabled={disabled || loading}
+      {...motionProps}
+      {...(props as React.ComponentPropsWithoutRef<typeof motion.button>)}
+    >
+      {inner}
     </motion.button>
   );
 }
